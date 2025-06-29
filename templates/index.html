@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Prediction Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fa-solid fa-cloud-sun"></i>
+                Weather Prediction Dashboard
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text" id="current-time"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Current Weather Cards -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="weather-date-input-wrap d-flex justify-content-center align-items-center" style="gap: 16px; margin-bottom: 10px;">
+                    <i class="fas fa-map-marker-alt text-primary" style="font-size: 2rem;"></i>
+                    <input type="date" id="weather-date-input" class="form-control" style="max-width: 180px;">
+                    <button id="btn-weather-date" class="btn btn-primary">Xem thời tiết</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4" id="current-weather-cards">
+            <!-- Cards will be populated by JavaScript -->
+        </div>
+
+        <!-- Charts Section -->
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <!-- Bảng dự báo 5 ngày thay thế cho biểu đồ nhiệt độ và độ ẩm -->
+                <div class="row g-4 align-items-stretch">
+                  <div class="col-md-6">
+                    <div class="comparison-card h-100">
+                      <div class="comparison-header-model">
+                        <i class="fas fa-robot"></i>
+                        Dự đoán Model (5 ngày tới)
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table comparison-table-modern comparison-table-model mb-0">
+                          <thead>
+                            <tr>
+                              <th>Ngày</th>
+                              <th>Nhiệt độ (°C)</th>
+                              <th>Lượng mưa (mm)</th>
+                            </tr>
+                          </thead>
+                          <tbody id="forecast5-model-tbody">
+                            <tr><td colspan="3" class="text-center text-muted">Đang tải...</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="comparison-card h-100">
+                      <div class="comparison-header-actual">
+                        <i class="fas fa-database"></i>
+                        Dữ liệu thực tế (5 ngày gần nhất)
+                      </div>
+                      <div class="table-responsive">
+                        <table class="table comparison-table-modern comparison-table-actual mb-0">
+                          <thead>
+                            <tr>
+                              <th>Ngày</th>
+                              <th>Nhiệt độ TB (°C)</th>
+                              <th>Lượng mưa (mm)</th>
+                            </tr>
+                          </thead>
+                          <tbody id="forecast5-actual-tbody">
+                            <tr><td colspan="3" class="text-center text-muted">Đang tải...</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-chart-pie me-2"></i>
+                            Thống kê tổng quan
+                        </h5>
+                    </div>
+                    <div class="card-body" id="weather-stats">
+                        <!-- Stats will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forecast Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Dự báo nhiệt độ và lượng mưa 7 ngày tới (Random Forest)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="forecastChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Comparison Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-brain me-2"></i>
+                            Dự báo chi tiết 7 ngày tới (Random Forest)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="modelPredictionChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model vs Actual Data Comparison Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-balance-scale me-2"></i>
+                            So sánh Dự đoán vs Dữ liệu thực tế
+                        </h5>
+                        <div class="mt-2">
+                            <div class="d-flex align-items-center gap-3">
+                                <input type="date" id="comparison-date-input" class="form-control" style="max-width: 180px;">
+                                <button id="btn-comparison" class="btn btn-outline-light">So sánh</button>
+                                <span class="text-light small">Chọn ngày để so sánh dự đoán với dữ liệu thực tế</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Model Predictions Table -->
+                            <div class="col-md-6">
+                                <div class="comparison-table-container">
+                                    <h6 class="text-primary mb-3">
+                                        <i class="fas fa-robot me-2"></i>
+                                        Dự đoán của Model
+                                    </h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover comparison-table">
+                                            <thead class="table-primary">
+                                                <tr>
+                                                    <th>Ngày</th>
+                                                    <th>Nhiệt độ (°C)</th>
+                                                    <th>Lượng mưa (mm)</th>
+                                                    <th>Độ chính xác</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="model-predictions-tbody">
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted">
+                                                        <i class="fas fa-spinner fa-spin me-2"></i>
+                                                        Chọn ngày để xem dự đoán
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Actual Data Table -->
+                            <div class="col-md-6">
+                                <div class="comparison-table-container">
+                                    <h6 class="text-success mb-3">
+                                        <i class="fas fa-database me-2"></i>
+                                        Dữ liệu thực tế
+                                    </h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover comparison-table">
+                                            <thead class="table-success">
+                                                <tr>
+                                                    <th>Ngày</th>
+                                                    <th>Nhiệt độ (°C)</th>
+                                                    <th>Lượng mưa (mm)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="actual-data-tbody">
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted">
+                                                        <i class="fas fa-spinner fa-spin me-2"></i>
+                                                        Chọn ngày để xem dữ liệu thực tế
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Comparison Summary -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="comparison-summary">
+                                    <h6 class="text-info mb-3">
+                                        <i class="fas fa-chart-line me-2"></i>
+                                        Tóm tắt so sánh
+                                    </h6>
+                                    <div class="row" id="comparison-summary-content">
+                                        <div class="col-md-3">
+                                            <div class="summary-card">
+                                                <div class="summary-icon temperature-accuracy">
+                                                    <i class="fas fa-thermometer-half"></i>
+                                                </div>
+                                                <div class="summary-content">
+                                                    <h5 id="temp-accuracy">-</h5>
+                                                    <p>Độ chính xác nhiệt độ</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="summary-card">
+                                                <div class="summary-icon precipitation-accuracy">
+                                                    <i class="fas fa-cloud-rain"></i>
+                                                </div>
+                                                <div class="summary-content">
+                                                    <h5 id="precip-accuracy">-</h5>
+                                                    <p>Độ chính xác lượng mưa</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="summary-card">
+                                                <div class="summary-icon avg-error">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                </div>
+                                                <div class="summary-content">
+                                                    <h5 id="avg-error">-</h5>
+                                                    <p>Sai số trung bình</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="summary-card">
+                                                <div class="summary-icon model-score">
+                                                    <i class="fas fa-star"></i>
+                                                </div>
+                                                <div class="summary-content">
+                                                    <h5 id="model-score">-</h5>
+                                                    <p>Điểm đánh giá model</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Forecast Cards -->
+        <div class="row mb-4" id="forecast-cards">
+            <!-- Forecast cards will be populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-light py-4 mt-5">
+        <div class="container text-center">
+            <p class="mb-0 text-muted">
+                <i class="fas fa-code me-2"></i>
+                Weather Prediction Dashboard - Powered by Flask & Chart.js
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html> 
