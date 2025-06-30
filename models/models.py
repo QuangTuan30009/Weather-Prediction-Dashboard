@@ -167,9 +167,18 @@ class WeatherPredictor:
         
         return predictions, future_dates
 
-def train_models(data_file="C:\\Users\\taqua\\OneDrive\\Chuyên nghành\\Kì 4\\DAP391m\\Project\\copy9\\data\\dataset.csv"):
-    df = pd.read_csv(data_file, encoding='latin1')
-    df['time'] = pd.to_datetime(df['time'])
+def train_models(data_file="C:/Users/taqua/OneDrive/Chuyên nghành/Kì 4/DAP391m/Project/clean_repo/data/dataset.csv"):
+    # Đọc file CSV với low_memory=False để tránh warning
+    df = pd.read_csv(data_file, encoding='latin1', low_memory=False)
+    
+    # Kiểm tra xem có cột 'time' không
+    if 'time' in df.columns:
+        df['time'] = pd.to_datetime(df['time'])
+    else:
+        # Nếu không có cột time, tạo một cột time giả dựa trên index
+        print("Không tìm thấy cột 'time', tạo cột time giả...")
+        df['time'] = pd.date_range(start='2020-01-01', periods=len(df), freq='H')
+    
     predictor = WeatherPredictor()
     
     X_train, X_test, y_temp_train, y_temp_test, y_precip_train, y_precip_test, features = predictor.prepare_data(df)
